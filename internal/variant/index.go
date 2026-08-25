@@ -15,7 +15,7 @@ type Index struct {
 }
 
 func NewIndex() *Index {
-	return &Index{}
+	return &Index{values: map[string]Variant{}, chromosome: map[string][]string{}}
 }
 func (i *Index) Put(_ context.Context, v Variant) error {
 	if err := EnsureValid(v); err != nil {

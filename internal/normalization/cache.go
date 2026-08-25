@@ -10,7 +10,7 @@ type MemoryCache struct {
 }
 
 func NewMemoryCache(maximum int) *MemoryCache {
-	return &MemoryCache{maximum: maximum, keys: []string{}}
+	return &MemoryCache{values: map[string]Result{}, maximum: maximum, keys: []string{}}
 }
 func (c *MemoryCache) Get(key string) (Result, bool) {
 	c.mu.RLock()

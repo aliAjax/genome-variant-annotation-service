@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/example/genome-variant-annotation/internal/platform"
 	"github.com/example/genome-variant-annotation/internal/variant"
+	"reflect"
 	"strings"
 )
 
@@ -43,7 +44,7 @@ func (s *Service) Normalize(ctx context.Context, v variant.Variant) (Result, err
 	if beforeRef != v.Reference || beforeAlt != v.Alternate {
 		changes = append(changes, Change{Kind: "minimal_representation", Before: beforeRef + ">" + beforeAlt, After: v.Reference + ">" + v.Alternate, PositionDelta: v.Position - original.Position})
 	}
-	if len(v.Reference) != len(v.Alternate) && s.reference != nil {
+	if len(v.Reference) != len(v.Alternate) && !isNilReference(s.reference) {
 		shifted, delta, err := s.leftAlign(ctx, v, 100)
 		if err != nil {
 			return Result{}, fmt.Errorf("left align: %w", err)
@@ -70,6 +71,25 @@ func trimPrefix(v variant.Variant) variant.Variant {
 	}
 	return v
 }
+// isNilReference reports whether the reference dependency is unavailable.
+// It treats both an untyped nil interface and a typed-nil pointer (for example
+// (*MemoryReference)(nil) wrapped in the Reference interface) as absent so that
+// insertion/deletion variants can be normalized without panicking when no
+// reference sequence has been configured.
+func isNilReference(r Reference) bool {
+	if r == nil {
+		return true
+	}
+	v := reflect.ValueOf(r)
+	switch v.Kind() {
+	case reflect.Invalid:
+		return true
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return v.IsNil()
+	}
+	return false
+}
+
 func (s *Service) leftAlign(ctx context.Context, v variant.Variant, max int) (variant.Variant, int64, error) {
 	shift := int64(0)
 	for v.Position > 1 && shift < int64(max) {

@@ -20,7 +20,9 @@ type Writer interface {
 }
 
 func WriteBatch(ctx context.Context, writer Writer, variants []Variant) BatchResult {
-	result := BatchResult{Accepted: variants[:0], Rejected: []BatchFailure{}}
+	// Use a fresh backing array for Accepted so the result never aliases the
+	// caller's input slice; consecutive batches must not share storage.
+	result := BatchResult{Accepted: make([]Variant, 0, len(variants)), Rejected: []BatchFailure{}}
 	seen := map[string]struct{}{}
 	for index, v := range variants {
 		select {
@@ -35,11 +37,16 @@ func WriteBatch(ctx context.Context, writer Writer, variants []Variant) BatchRes
 			continue
 		}
 		seen[key] = struct{}{}
-		if err := writer.Put(ctx, v); err != nil {
+		// Clone before handing the variant to the writer and before storing it in
+		// the result: the caller may keep mutating the input (e.g. reusing the
+		// Info map across parsed batches), which would otherwise leak back into
+		// the accepted records of this and earlier batches.
+		clone := v.Clone()
+		if err := writer.Put(ctx, clone); err != nil {
 			result.Rejected = append(result.Rejected, BatchFailure{Index: index, Key: key, Error: fmt.Sprintf("%v", err)})
 			continue
 		}
-		result.Accepted = append(result.Accepted, v)
+		result.Accepted = append(result.Accepted, clone)
 	}
 	return result
 }

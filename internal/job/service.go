@@ -30,7 +30,13 @@ func (s *Service) Submit(ctx context.Context, datasetID string, input []variant.
 	if len(input) > 100000 {
 		return Job{}, platform.ErrBudget
 	}
-	j := Job{ID: platform.NewID("job"), DatasetID: datasetID, Status: StatusQueued, Input: append([]variant.Variant(nil), input...), Results: []annotation.Result{}, Failures: []Failure{}, CreatedAt: s.clock.Now()}
+	// Deep copy the input so later mutations by the caller cannot change the
+	// job's stored input while the worker is still iterating it.
+	inputCopy := make([]variant.Variant, len(input))
+	for i, v := range input {
+		inputCopy[i] = v.Clone()
+	}
+	j := Job{ID: platform.NewID("job"), DatasetID: datasetID, Status: StatusQueued, Input: inputCopy, Results: []annotation.Result{}, Failures: []Failure{}, CreatedAt: s.clock.Now()}
 	if err := s.repo.Save(ctx, j); err != nil {
 		return Job{}, fmt.Errorf("save job: %w", err)
 	}

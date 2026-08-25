@@ -13,10 +13,20 @@ import (
 
 type Encoder struct {
 	writer  *bufio.Writer
-	pending []variant.Variant
+	pending []encodedVariant
 }
 
-func NewEncoder(w io.Writer) *Encoder { return &Encoder{writer: bufio.NewWriter(w), pending: []variant.Variant{}} }
+// encodedVariant snapshots the INFO field at WriteVariant time. Encoding lazily
+// at Flush would otherwise observe later mutations to v.Info made by the
+// caller between WriteVariant and Flush.
+type encodedVariant struct {
+	variant     variant.Variant
+	encodedInfo string
+}
+
+func NewEncoder(w io.Writer) *Encoder {
+	return &Encoder{writer: bufio.NewWriter(w), pending: []encodedVariant{}}
+}
 
 func (e *Encoder) WriteHeader(h Header) error {
 	format := h.FileFormat
@@ -49,11 +59,14 @@ func (e *Encoder) WriteHeader(h Header) error {
 }
 
 func (e *Encoder) WriteVariant(v variant.Variant) error {
-	e.pending = append(e.pending, v)
+	// Snapshot the encoded INFO now so later mutations to v.Info (e.g. reusing
+	// the Info map for the next record) cannot change what Flush emits.
+	e.pending = append(e.pending, encodedVariant{variant: v, encodedInfo: encodeInfo(v.Info)})
 	return nil
 }
 
-func (e *Encoder) writeVariant(v variant.Variant) error {
+func (e *Encoder) writeVariant(ev encodedVariant) error {
+	v := ev.variant
 	quality := "."
 	if v.Quality != nil {
 		quality = strconv.FormatFloat(*v.Quality, 'f', -1, 64)
@@ -62,7 +75,10 @@ func (e *Encoder) writeVariant(v variant.Variant) error {
 	if len(v.Filters) > 0 {
 		filters = strings.Join(v.Filters, ";")
 	}
-	info := encodeInfo(v.Info)
+	info := ev.encodedInfo
+	if info == "" {
+		info = "."
+	}
 	id := v.ID
 	if id == "" {
 		id = "."
@@ -72,8 +88,8 @@ func (e *Encoder) writeVariant(v variant.Variant) error {
 }
 
 func (e *Encoder) Flush() error {
-	for _, v := range e.pending {
-		if err := e.writeVariant(v); err != nil {
+	for _, ev := range e.pending {
+		if err := e.writeVariant(ev); err != nil {
 			return err
 		}
 	}

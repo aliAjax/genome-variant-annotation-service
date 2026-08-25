@@ -31,7 +31,10 @@ func (s *Service) Annotate(ctx context.Context, datasetID string, input variant.
 	if err != nil {
 		return Result{}, fmt.Errorf("normalize: %w", err)
 	}
-	v := normalized.Normalized
+	// Clone the normalized variant so the Result owns its own Info/Filters/
+	// Quality, independent of the input the caller passed (the normalizer
+	// returns a struct copy that still aliases the input's Info map).
+	v := normalized.Normalized.Clone()
 	features, err := s.reference.Query(ctx, datasetID, v.Chromosome, v.Position, v.End())
 	if err != nil {
 		return Result{}, fmt.Errorf("query reference: %w", err)

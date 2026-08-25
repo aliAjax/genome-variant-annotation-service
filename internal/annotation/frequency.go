@@ -13,15 +13,20 @@ type FrequencySummary struct {
 }
 
 func SummarizeFrequencies(values map[string]float64, rareThreshold float64) FrequencySummary {
-	result := FrequencySummary{Rare: true, Values: values}
-	keys := make([]string, 0, len(values))
+	// Copy the input map so later mutations by the caller cannot alter the
+	// summary's Values (and cannot leak between consecutive summaries).
+	out := make(map[string]float64, len(values))
 	for key, value := range values {
+		out[key] = value
+	}
+	result := FrequencySummary{Rare: true, Values: out}
+	keys := make([]string, 0, len(out))
+	for key := range out {
 		keys = append(keys, key)
-		result.Values[key] = value
 	}
 	sort.Strings(keys)
 	for _, key := range keys {
-		value := values[key]
+		value := out[key]
 		if value > result.Maximum {
 			result.Maximum = value
 			result.Population = key

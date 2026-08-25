@@ -41,6 +41,37 @@ func NormalizeChromosome(v string) string {
 		return v
 	}
 }
+
+// Clone returns a deep copy of v so that callers cannot mutate the receiver's
+// reference-typed fields (Info, Filters, Quality) through aliases. It is used
+// whenever a Variant is stored or returned across batch boundaries.
+func (v Variant) Clone() Variant {
+	cloned := v
+	if v.Info != nil {
+		info := make(map[string][]string, len(v.Info))
+		for key, values := range v.Info {
+			if values == nil {
+				info[key] = nil
+				continue
+			}
+			cp := make([]string, len(values))
+			copy(cp, values)
+			info[key] = cp
+		}
+		cloned.Info = info
+	}
+	if len(v.Filters) > 0 {
+		filters := make([]string, len(v.Filters))
+		copy(filters, v.Filters)
+		cloned.Filters = filters
+	}
+	if v.Quality != nil {
+		quality := *v.Quality
+		cloned.Quality = &quality
+	}
+	return cloned
+}
+
 func (v Variant) SortedInfoKeys() []string {
 	keys := make([]string, 0, len(v.Info))
 	for k := range v.Info {

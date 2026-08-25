@@ -46,8 +46,24 @@ func (r *MemoryRepository) List(_ context.Context) ([]Job, error) {
 	return out, nil
 }
 func cloneJob(j Job) Job {
-	j.Input = append([]variant.Variant(nil), j.Input...)
-	j.Results = append([]annotation.Result(nil), j.Results...)
+	// Deep copy every reference-typed field so stored jobs are fully
+	// independent of the caller's input and of later batches. Without this,
+	// a Result produced for batch 1 could be mutated by batch 2 through the
+	// shared Variant.Info / Frequencies map / slice headers.
+	if j.Input != nil {
+		input := make([]variant.Variant, len(j.Input))
+		for i, v := range j.Input {
+			input[i] = v.Clone()
+		}
+		j.Input = input
+	}
+	if j.Results != nil {
+		results := make([]annotation.Result, len(j.Results))
+		for i, r := range j.Results {
+			results[i] = r.Clone()
+		}
+		j.Results = results
+	}
 	j.Failures = append([]Failure(nil), j.Failures...)
 	return j
 }

@@ -98,7 +98,7 @@ func SplitMultiAllelic(v variant.Variant) ([]variant.Variant, error) {
 	}
 	out := make([]variant.Variant, 0, len(alts))
 	for i, alt := range alts {
-		copyVariant := v
+		copyVariant := v.Clone()
 		copyVariant.Alternate = alt
 		copyVariant.Info = copyInfo(v.Info, i, len(alts))
 		if err := variant.EnsureValid(copyVariant); err != nil {

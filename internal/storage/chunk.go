@@ -36,11 +36,13 @@ func (s *MemoryStore) Put(_ context.Context, job string, index int, data []byte)
 	if job == "" || index < 0 || len(data) == 0 {
 		return Chunk{}, platform.ErrInvalid
 	}
+	stored := make([]byte, len(data))
+	copy(stored, data)
 	digest := sha256.Sum256(data)
 	chunk := Chunk{ID: platform.NewID("chunk"), JobID: job, Index: index, Digest: fmt.Sprintf("sha256:%x", digest), Size: int64(len(data)), CreatedAt: s.clock.Now()}
 	s.mu.Lock()
 	s.metadata[chunk.ID] = chunk
-	s.data[chunk.ID] = data
+	s.data[chunk.ID] = stored
 	s.mu.Unlock()
 	return chunk, nil
 }
@@ -51,7 +53,9 @@ func (s *MemoryStore) Get(_ context.Context, id string) ([]byte, error) {
 	if !ok {
 		return nil, platform.ErrNotFound
 	}
-	return data, nil
+	out := make([]byte, len(data))
+	copy(out, data)
+	return out, nil
 }
 func (s *MemoryStore) Delete(_ context.Context, id string) error {
 	s.mu.Lock()

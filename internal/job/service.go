@@ -64,17 +64,29 @@ func (s *Service) Cancel(ctx context.Context, id string) (Job, error) {
 	return j, nil
 }
 func (s *Service) Run(ctx context.Context, workers int) {
+	if workers < 1 {
+		workers = 1
+	}
 	for i := 0; i < workers; i++ {
 		go s.worker(ctx)
 	}
 }
 func (s *Service) worker(ctx context.Context) {
-	select {
-	case <-ctx.Done():
-		return
-	case id := <-s.queue:
-		s.process(ctx, id)
-		return
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case id, ok := <-s.queue:
+			if !ok {
+				return
+			}
+			s.process(ctx, id)
+		}
 	}
 }
 func (s *Service) process(ctx context.Context, id string) {

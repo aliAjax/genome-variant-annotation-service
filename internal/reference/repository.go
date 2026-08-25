@@ -55,6 +55,7 @@ func (r *MemoryRepository) AddFeatures(_ context.Context, id string, features []
 	}
 	for _, f := range features {
 		f.DatasetID = id
+		f.Attributes = cloneStringMap(f.Attributes)
 		r.features[id] = append(r.features[id], f)
 	}
 	d := r.datasets[id]
@@ -71,8 +72,19 @@ func (r *MemoryRepository) Query(_ context.Context, id, chromosome string, start
 	out := []Feature{}
 	for _, f := range r.features[id] {
 		if f.Chromosome == chromosome && f.Overlaps(start, end) {
+			f.Attributes = cloneStringMap(f.Attributes)
 			out = append(out, f)
 		}
 	}
 	return out, nil
+}
+func cloneStringMap(in map[string]string) map[string]string {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
 }

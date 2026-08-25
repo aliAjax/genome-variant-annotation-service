@@ -34,7 +34,7 @@ func (r *MemoryRepository) Get(_ context.Context, id string) (Job, error) {
 	if !ok {
 		return Job{}, fmt.Errorf("job %s: %w", id, platform.ErrNotFound)
 	}
-	return j, nil
+	return cloneJob(j), nil
 }
 func (r *MemoryRepository) List(_ context.Context) ([]Job, error) {
 	r.mu.RLock()
@@ -47,7 +47,45 @@ func (r *MemoryRepository) List(_ context.Context) ([]Job, error) {
 }
 func cloneJob(j Job) Job {
 	j.Input = append([]variant.Variant(nil), j.Input...)
-	j.Results = append([]annotation.Result(nil), j.Results...)
+	j.Results = cloneResults(j.Results)
 	j.Failures = append([]Failure(nil), j.Failures...)
 	return j
+}
+func cloneResults(in []annotation.Result) []annotation.Result {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]annotation.Result, len(in))
+	for i, r := range in {
+		out[i] = cloneResult(r)
+	}
+	return out
+}
+func cloneResult(r annotation.Result) annotation.Result {
+	r.Genes = append([]string(nil), r.Genes...)
+	r.Consequences = append([]annotation.Consequence(nil), r.Consequences...)
+	r.ClinicalLabels = append([]string(nil), r.ClinicalLabels...)
+	r.Warnings = append([]string(nil), r.Warnings...)
+	if len(r.Frequencies) != 0 {
+		freqs := make(map[string]float64, len(r.Frequencies))
+		for k, v := range r.Frequencies {
+			freqs[k] = v
+		}
+		r.Frequencies = freqs
+	}
+	if len(r.Evidence) != 0 {
+		ev := make([]annotation.Evidence, len(r.Evidence))
+		for i, e := range r.Evidence {
+			ev[i] = e
+			if len(e.Fields) != 0 {
+				fields := make(map[string]string, len(e.Fields))
+				for k, v := range e.Fields {
+					fields[k] = v
+				}
+				ev[i].Fields = fields
+			}
+		}
+		r.Evidence = ev
+	}
+	return r
 }

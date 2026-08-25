@@ -1,0 +1,5 @@
+http_addr: ":8080"
+auth_token: "dev-token"
+worker_count: 4
+maximum_vcf_bytes: 16777216
+result_ttl: "24h"

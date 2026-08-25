@@ -3,6 +3,7 @@ package vcf
 import (
 	"bufio"
 	"fmt"
+	"github.com/example/genome-variant-annotation/internal/platform"
 	"github.com/example/genome-variant-annotation/internal/variant"
 	"io"
 	"strconv"
@@ -46,7 +47,7 @@ func (p *Parser) Parse(r io.Reader) (Result, error) {
 			continue
 		}
 		if !sawColumns {
-			return Result{}, fmt.Errorf("line %d: missing column header", lineNo)
+			return Result{}, fmt.Errorf("line %d: missing column header: %w", lineNo, platform.ErrInvalid)
 		}
 		v, err := parseRecord(line, lineNo)
 		if err != nil {
@@ -54,11 +55,11 @@ func (p *Parser) Parse(r io.Reader) (Result, error) {
 		}
 		result.Variants = append(result.Variants, v)
 		if len(result.Variants) > p.MaximumRecords {
-			return Result{}, fmt.Errorf("record limit exceeded")
+			return Result{}, fmt.Errorf("record limit exceeded: %w", platform.ErrInvalid)
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return Result{}, fmt.Errorf("scan vcf: %v", err)
+		return Result{}, fmt.Errorf("scan vcf: %v: %w", err, platform.ErrInvalid)
 	}
 	if result.Header.FileFormat == "" {
 		result.Warnings = append(result.Warnings, "fileformat metadata is missing")
@@ -68,17 +69,17 @@ func (p *Parser) Parse(r io.Reader) (Result, error) {
 func parseRecord(line string, lineNo int) (variant.Variant, error) {
 	fields := strings.Split(line, "\t")
 	if len(fields) < 8 {
-		return variant.Variant{}, fmt.Errorf("line %d: expected 8 fields", lineNo)
+		return variant.Variant{}, fmt.Errorf("line %d: expected 8 fields: %w", lineNo, platform.ErrInvalid)
 	}
 	position, err := strconv.ParseInt(fields[1], 10, 64)
 	if err != nil {
-		return variant.Variant{}, fmt.Errorf("line %d position: %v", lineNo, err)
+		return variant.Variant{}, fmt.Errorf("line %d position: %v: %w", lineNo, err, platform.ErrInvalid)
 	}
 	var quality *float64
 	if fields[5] != "." {
 		v, err := strconv.ParseFloat(fields[5], 64)
 		if err != nil {
-			return variant.Variant{}, fmt.Errorf("line %d quality: %v", lineNo, err)
+			return variant.Variant{}, fmt.Errorf("line %d quality: %v: %w", lineNo, err, platform.ErrInvalid)
 		}
 		quality = &v
 	}

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"github.com/example/genome-variant-annotation/internal/platform"
 	"io"
 	"strings"
 )
@@ -36,7 +37,7 @@ func Stream(ctx context.Context, r io.Reader, maximumLineBytes int) (<-chan Stre
 			}
 		}
 		if err := scanner.Err(); err != nil {
-			errors <- fmt.Errorf("stream vcf: %v", err)
+			errors <- fmt.Errorf("stream vcf: %v: %w", err, platform.ErrInvalid)
 		}
 	}()
 	return records, errors

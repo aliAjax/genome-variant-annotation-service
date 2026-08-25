@@ -74,7 +74,7 @@ func (s *Service) ImportJSONL(ctx context.Context, datasetID string, r io.Reader
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return summary, fmt.Errorf("scan features: %w", err)
+		return summary, fmt.Errorf("scan features: %v: %w", err, platform.ErrInvalid)
 	}
 	if err := flush(); err != nil {
 		return summary, fmt.Errorf("flush final batch: %w", err)

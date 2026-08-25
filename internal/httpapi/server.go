@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/subtle"
 	"encoding/json"
 	"errors"
@@ -269,12 +270,16 @@ func (s *Server) regionQuery(w http.ResponseWriter, r *http.Request) {
 
 func statusFor(err error) int {
 	switch {
+	case errors.Is(err, platform.ErrInvalid):
+		return http.StatusBadRequest
 	case errors.Is(err, platform.ErrNotFound):
 		return http.StatusNotFound
 	case errors.Is(err, platform.ErrConflict):
 		return http.StatusConflict
 	case errors.Is(err, platform.ErrBudget):
 		return http.StatusRequestEntityTooLarge
+	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+		return http.StatusServiceUnavailable
 	default:
 		return http.StatusInternalServerError
 	}

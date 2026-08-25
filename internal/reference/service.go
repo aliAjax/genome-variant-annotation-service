@@ -64,9 +64,12 @@ func (s *Service) Publish(ctx context.Context, id string) (Dataset, error) {
 }
 func (s *Service) Get(ctx context.Context, id string) (Dataset, error) { return s.repo.Get(ctx, id) }
 func (s *Service) Query(ctx context.Context, id, chromosome string, start, end int64) ([]Feature, error) {
-	_, err := s.repo.Get(ctx, id)
+	d, err := s.repo.Get(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if d.Status != StatusPublished {
+		return nil, fmt.Errorf("dataset %s not published: %w", id, platform.ErrConflict)
 	}
 	return s.repo.Query(ctx, id, chromosome, start, end)
 }

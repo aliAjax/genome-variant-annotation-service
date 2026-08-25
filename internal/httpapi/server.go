@@ -166,8 +166,13 @@ func (s *Server) annotationJobs(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err, http.StatusBadRequest)
 		return
 	}
-	if _, err := s.references.Get(r.Context(), request.DatasetID); err != nil {
+	dataset, err := s.references.Get(r.Context(), request.DatasetID)
+	if err != nil {
 		writeError(w, err, statusFor(err))
+		return
+	}
+	if dataset.Status != reference.StatusPublished {
+		writeError(w, fmt.Errorf("dataset %s not published: %w", request.DatasetID, platform.ErrConflict), statusFor(platform.ErrConflict))
 		return
 	}
 	j, err := s.jobs.Submit(r.Context(), request.DatasetID, request.Variants)

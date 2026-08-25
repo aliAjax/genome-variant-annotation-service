@@ -36,7 +36,6 @@ func (s *Service) Annotate(ctx context.Context, datasetID string, input variant.
 	if err != nil {
 		return Result{}, fmt.Errorf("query reference: %w", err)
 	}
-	sort.Slice(features, func(i, j int) bool { return features[i].Start < features[j].Start })
 	result := Result{Variant: v, VariantKey: v.Key(), DatasetID: datasetID, Genes: []string{}, Consequences: []Consequence{}, Frequencies: map[string]float64{}, Evidence: []Evidence{}}
 	genes := map[string]struct{}{}
 	for _, feature := range features {

@@ -66,7 +66,17 @@ func (r *MemoryRepository) Query(_ context.Context, id, chromosome string, start
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	if _, ok := r.datasets[id]; !ok {
-		return nil, platform.ErrNotFound
+		return nil, fmt.Errorf("dataset %s: %w", id, platform.ErrNotFound)
 	}
-	return r.features[id], nil
+	out := make([]Feature, 0, 8)
+	for _, f := range r.features[id] {
+		if f.Chromosome != chromosome {
+			continue
+		}
+		if !f.Overlaps(start, end) {
+			continue
+		}
+		out = append(out, f)
+	}
+	return out, nil
 }

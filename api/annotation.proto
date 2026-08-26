@@ -1,0 +1,6 @@
+syntax = "proto3";
+package annotation.v1;
+option go_package = "github.com/example/genome-variant-annotation/api/annotationv1";
+service AnnotationService { rpc Annotate(stream VariantRequest) returns (stream VariantResponse); }
+message VariantRequest { string dataset_id = 1; string chromosome = 2; int64 position = 3; string reference = 4; string alternate = 5; }
+message VariantResponse { string variant_key = 1; repeated string genes = 2; repeated string consequences = 3; }

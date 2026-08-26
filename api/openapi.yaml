@@ -1,0 +1,6 @@
+openapi: 3.0.3
+info: {title: Genome Variant Annotation, version: 1.0.0}
+paths:
+  /v1/reference-datasets: {post: {responses: {'201': {description: created}}}}
+  /v1/annotation-jobs: {post: {responses: {'202': {description: accepted}}}}
+  /v1/normalization/preview: {post: {responses: {'200': {description: normalized}}}}
